@@ -74,6 +74,8 @@ public:
 
   GLFWwindow* getGLFWwindow() { return m_window; }
 
+  void resize(glm::ivec2 const& windowsize = glm::ivec2(640, 480));
+
 private:
   GLFWwindow* m_window;
   glm::ivec2 m_size;

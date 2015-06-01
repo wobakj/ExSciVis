@@ -479,6 +479,10 @@ void UpdateImGui()
     io.DeltaTime = (float)(current_time - time);
     time = current_time;
 
+    if (io.DeltaTime < 0.0)
+        io.DeltaTime = current_time;
+
+
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
@@ -647,6 +651,40 @@ void showGUI(){
 
     if (ImGui::CollapsingHeader("Window options"))
     {        
+        if (ImGui::TreeNode("Window Size")){
+            const char* items[] = { "640x480", "720x576", "1280x720", "1920x1080", "1920x1200", "2048x1536" };
+            static int item2 = -1;
+            bool press = ImGui::Combo("Window Size", &item2, items, IM_ARRAYSIZE(items));    
+
+            if (press){
+                glm::ivec2 win_re_size = glm::ivec2(640, 480);
+
+                switch (item2){
+                case 0:
+                    win_re_size = glm::ivec2(640, 480);
+                    break;
+                case 1:
+                    win_re_size = glm::ivec2(720, 576);
+                    break;
+                case 2:
+                    win_re_size = glm::ivec2(1280, 720);
+                    break;
+                case 3:
+                    win_re_size = glm::ivec2(1920, 1080);
+                    break;
+                case 4:
+                    win_re_size = glm::ivec2(1920, 1200);
+                    break;
+                case 5:
+                    win_re_size = glm::ivec2(1920, 1536);
+                    break;
+                default:
+                    break;
+                }                
+                g_win.resize(glm::ivec2(900, 600));
+            }
+            ImGui::TreePop();
+        }
         if (ImGui::TreeNode("Background Color")){
             ImGui::ColorEdit3("BC", &g_background_color[0]);
             ImGui::TreePop();
@@ -940,6 +978,8 @@ int main(int argc, char* argv[])
     // add new input if neccessary (ie changing sampling distance, isovalues, ...)
     while (!g_win.shouldClose()) {
 
+        
+
         // exit window with escape
         if (g_win.isKeyPressed(GLFW_KEY_ESCAPE)) {
             g_win.stop();
@@ -980,6 +1020,11 @@ int main(int argc, char* argv[])
             g_sampling_distance += 0.0001f;
             g_sampling_distance = std::min(g_sampling_distance, 0.2f);
         }
+
+        if (g_win.isKeyPressed(GLFW_KEY_R)) {
+            g_win.resize(glm::ivec2(900, 600));
+        }
+
 
         float sampling_fact = g_sampling_distance_fact;
         if (g_win.isButtonPressed(Window::MOUSE_BUTTON_LEFT) || g_win.isButtonPressed(Window::MOUSE_BUTTON_MIDDLE) || g_win.isButtonPressed(Window::MOUSE_BUTTON_RIGHT)) {

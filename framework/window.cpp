@@ -14,7 +14,7 @@
 Window::Window(glm::ivec2 const& windowsize)
   : m_window(nullptr)
   , m_size(windowsize)
-  , m_title("Fensterchen")
+  , m_title("ExSciVis")
   , m_mousePosition()
   , m_mouseButtonFlags(0)
   , m_keypressed()
@@ -184,4 +184,10 @@ void Window::drawPoint(float x, float y, float r, float g, float b) const
 float Window::getTime() const
 {
   return float(glfwGetTime());
+}
+
+
+void Window::resize(glm::ivec2 const& windowsize)
+{
+    glfwSetWindowSize(m_window, windowsize.x, windowsize.y);        
 }
