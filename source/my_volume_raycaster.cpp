@@ -681,10 +681,12 @@ void showGUI(){
                 default:
                     break;
                 }                
-                g_win.resize(glm::ivec2(900, 600));
+                g_win.resize(win_re_size);                
             }
+
             ImGui::TreePop();
         }
+        
         if (ImGui::TreeNode("Background Color")){
             ImGui::ColorEdit3("BC", &g_background_color[0]);
             ImGui::TreePop();
