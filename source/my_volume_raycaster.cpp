@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include <cmath>
 
-         ///GLM INCLUDES
+///GLM INCLUDES
 #define GLM_FORCE_RADIANS
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -29,7 +29,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/norm.hpp>
 
-         ///PROJECT INCLUDES
+///PROJECT INCLUDES
 #include <volume_loader_raw.hpp>
 #include <transfer_function.hpp>
 #include <utils.hpp>
@@ -39,9 +39,13 @@
 #include <stb_image.h>        // stb_image.h for PNG loading
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
-         //-----------------------------------------------------------------------------
-         // Helpers
-         //-----------------------------------------------------------------------------
+///IMGUI INCLUDES
+#include <imgui_impl_glfw_gl3.h>
+
+
+//-----------------------------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------------------------
 
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 
@@ -159,17 +163,7 @@ bool g_opacity_correction_toggle = false;
 
 // imgui variables
 static bool g_show_gui = true;
-
-GLuint g_color_tex = 0;
-
-static GLuint fontTex;
 static bool mousePressed[2] = { false, false };
-
-static int g_gui_program, vert_handle, frag_handle;
-static int texture_location, ortho_location;
-static int position_location, uv_location, colour_location;
-static size_t vbo_max_size = 20000;
-static unsigned int vbo_handle, vao_handle;
 
 bool g_show_transfer_function_in_window = false;
 glm::vec2 g_transfer_function_pos = glm::vec2(0.0f);
@@ -197,6 +191,8 @@ Cube g_cube;
 
 int g_bilinear_interpolation = true;
 
+bool first_frame = true;
+
 struct Manipulator
 {
     Manipulator()
@@ -215,7 +211,8 @@ struct Manipulator
     glm::mat4 matrix(Window const& g_win)
     {
         m_mouse = g_win.mousePosition();
-        if (g_win.isButtonPressed(Window::MOUSE_BUTTON_LEFT)) {
+        
+        if (ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_LEFT)) {
             if (!m_mouse_button_pressed[0]) {
                 m_mouse_button_pressed[0] = 1;
             }
@@ -230,7 +227,7 @@ struct Manipulator
             //m_slidelastMouse *= 0.99f;
         }
 
-        if (g_win.isButtonPressed(Window::MOUSE_BUTTON_MIDDLE)) {
+        if (ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_MIDDLE)) {
             if (!m_mouse_button_pressed[1]) {
                 m_mouse_button_pressed[1] = 1;
             }
@@ -240,7 +237,7 @@ struct Manipulator
             m_mouse_button_pressed[1] = 0;
         }
 
-        if (g_win.isButtonPressed(Window::MOUSE_BUTTON_RIGHT)) {
+        if (ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_RIGHT)) {
             if (!m_mouse_button_pressed[2]) {
                 m_mouse_button_pressed[2] = 1;
             }
@@ -295,173 +292,6 @@ bool read_volume(std::string& volume_string){
 
 }
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
-{
-    if (cmd_lists_count == 0)
-        return;
-
-    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_SCISSOR_TEST);
-
-    // Setup texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
-
-    // Setup orthographic projection matrix
-    const float width = ImGui::GetIO().DisplaySize.x;
-    const float height = ImGui::GetIO().DisplaySize.y;
-    const float ortho_projection[4][4] =
-    {
-        { 2.0f / width, 0.0f, 0.0f, 0.0f },
-        { 0.0f, 2.0f / -height, 0.0f, 0.0f },
-        { 0.0f, 0.0f, -1.0f, 0.0f },
-        { -1.0f, 1.0f, 0.0f, 1.0f },
-    };
-    glUseProgram(g_gui_program);
-    glUniform1i(texture_location, 0);
-    glUniformMatrix4fv(ortho_location, 1, GL_FALSE, &ortho_projection[0][0]);
-
-    // Grow our buffer according to what we need
-    size_t total_vtx_count = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-    size_t neededBufferSize = total_vtx_count * sizeof(ImDrawVert);
-    if (neededBufferSize > vbo_max_size)
-    {
-        vbo_max_size = neededBufferSize + 5000;  // Grow buffer
-        glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_STREAM_DRAW);
-    }
-
-    // Copy and convert all vertices into a single contiguous buffer
-    unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    if (!buffer_data)
-        return;
-    for (int n = 0; n < cmd_lists_count; n++)
-    {
-        const ImDrawList* cmd_list = cmd_lists[n];
-        memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-        buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
-    }
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(vao_handle);
-
-    int cmd_offset = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-    {
-        const ImDrawList* cmd_list = cmd_lists[n];
-        int vtx_offset = cmd_offset;
-        const ImDrawCmd* pcmd_end = cmd_list->commands.end();
-        for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
-        {
-            glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-            glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
-            vtx_offset += pcmd->vtx_count;
-        }
-        cmd_offset = vtx_offset;
-    }
-
-    // Restore modified state
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glDisable(GL_SCISSOR_TEST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-static const char* ImImpl_GetClipboardTextFn()
-{
-    return glfwGetClipboardString(g_win.getGLFWwindow());
-}
-
-static void ImImpl_SetClipboardTextFn(const char* text)
-{
-    glfwSetClipboardString(g_win.getGLFWwindow(), text);
-}
-
-
-void InitImGui()
-{
-    ImGuiIO& io = ImGui::GetIO();
-    io.DeltaTime = 1.0f / 60.0f;                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.5f;                                  // Align OpenGL texels
-    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
-    io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
-    io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
-    io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
-    io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
-    io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
-    io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
-    io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
-    io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
-    io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
-    io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
-    io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
-
-    io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-    io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
-    io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
-
-    // Load font texture
-    glGenTextures(1, &fontTex);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-    stbi_image_free(tex_data);
-
-
-    try {
-        g_gui_program = loadShaders(g_GUI_file_vertex_shader, g_GUI_file_fragment_shader);
-    }
-    catch (std::logic_error& e) {
-        std::cerr << e.what() << std::endl;
-    }
-
-    texture_location = glGetUniformLocation(g_gui_program, "Texture");
-    ortho_location = glGetUniformLocation(g_gui_program, "ortho");
-    position_location = glGetAttribLocation(g_gui_program, "Position");
-    uv_location = glGetAttribLocation(g_gui_program, "UV");
-    colour_location = glGetAttribLocation(g_gui_program, "Colour");
-
-    glGenBuffers(1, &vbo_handle);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-    glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
-
-    glGenVertexArrays(1, &vao_handle);
-    glBindVertexArray(vao_handle);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-    glEnableVertexAttribArray(position_location);
-    glEnableVertexAttribArray(uv_location);
-    glEnableVertexAttribArray(colour_location);
-
-    glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, pos));
-    glVertexAttribPointer(uv_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, uv));
-    glVertexAttribPointer(colour_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, col));
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-}
-
 void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -478,11 +308,7 @@ void UpdateImGui()
     const double current_time = glfwGetTime();
     io.DeltaTime = (float)(current_time - time);
     time = current_time;
-
-    if (io.DeltaTime < 0.0)
-        io.DeltaTime = current_time;
-
-
+    
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
@@ -494,7 +320,8 @@ void UpdateImGui()
     io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(g_win.getGLFWwindow(), GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
     // Start the frame
-    ImGui::NewFrame();
+    //ImGui::NewFrame();
+    ImGui_ImplGlfwGL3_NewFrame();
 }
 
 
@@ -732,7 +559,7 @@ void showGUI(){
     ImGui::PlotLines("", &A.front(), (int)A.size(), (int)0, "", 0.0, 255.0, ImVec2(0, 70));
 
     g_transfer_function_pos.x = ImGui::GetItemBoxMin().x;
-    g_transfer_function_pos.y = ImGui::GetIO().DisplaySize.y - ImGui::GetItemBoxMin().y - 75;
+    g_transfer_function_pos.y = ImGui::GetIO().DisplaySize.y - ImGui::GetItemBoxMin().y - 70;
 
     g_transfer_function_size.x = ImGui::GetItemBoxMax().x - ImGui::GetItemBoxMin().x;
     g_transfer_function_size.y = ImGui::GetItemBoxMax().y - ImGui::GetItemBoxMin().y;
@@ -933,7 +760,8 @@ void showGUI(){
 int main(int argc, char* argv[])
 {
     //g_win = Window(g_window_res);
-    InitImGui();
+    //InitImGui();
+    ImGui_ImplGlfwGL3_Init(g_win.getGLFWwindow(), true);
 
     // initialize the transfer function
 
@@ -945,7 +773,7 @@ int main(int argc, char* argv[])
     //  - vec4f         - color and alpha value   (0.0 .. 1.0) per channel
     g_transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
     g_transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 1.0));
-
+    g_transfer_dirty = true;
 
     ///NOTHING TODO HERE-------------------------------------------------------------------------------
 
@@ -979,66 +807,64 @@ int main(int argc, char* argv[])
     // manage keys here
     // add new input if neccessary (ie changing sampling distance, isovalues, ...)
     while (!g_win.shouldClose()) {
-
-        
-
-        // exit window with escape
-        if (g_win.isKeyPressed(GLFW_KEY_ESCAPE)) {
-            g_win.stop();
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_LEFT)) {
-            g_light_pos.x -= 0.5f;
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_RIGHT)) {
-            g_light_pos.x += 0.5f;
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_UP)) {
-            g_light_pos.z -= 0.5f;
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_DOWN)) {
-            g_light_pos.z += 0.5f;
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_MINUS)) {
-            g_iso_value -= 0.002f;
-            g_iso_value = std::max(g_iso_value, 0.0f);
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_EQUAL) || g_win.isKeyPressed(GLFW_KEY_KP_ADD)) {
-            g_iso_value += 0.002f;
-            g_iso_value = std::min(g_iso_value, 1.0f);
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_D)) {
-            g_sampling_distance -= 0.0001f;
-            g_sampling_distance = std::max(g_sampling_distance, 0.0001f);
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_S)) {
-            g_sampling_distance += 0.0001f;
-            g_sampling_distance = std::min(g_sampling_distance, 0.2f);
-        }
-
-        if (g_win.isKeyPressed(GLFW_KEY_R)) {
-            g_win.resize(glm::ivec2(900, 600));
-        }
-
-
         float sampling_fact = g_sampling_distance_fact;
-        if (g_win.isButtonPressed(Window::MOUSE_BUTTON_LEFT) || g_win.isButtonPressed(Window::MOUSE_BUTTON_MIDDLE) || g_win.isButtonPressed(Window::MOUSE_BUTTON_RIGHT)) {
-            sampling_fact = g_sampling_distance_fact_move;
+        if (!first_frame > 0.0){
+
+            // exit window with escape
+            if (ImGui::IsKeyPressed(GLFW_KEY_ESCAPE)) {                
+                g_win.stop();
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_LEFT)) {
+                g_light_pos.x -= 0.5f;
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_RIGHT)) {
+                g_light_pos.x += 0.5f;
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_UP)) {
+                g_light_pos.z -= 0.5f;
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_DOWN)) {
+                g_light_pos.z += 0.5f;
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_MINUS)) {
+                g_iso_value -= 0.002f;
+                g_iso_value = std::max(g_iso_value, 0.0f);
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_EQUAL) || ImGui::IsKeyPressed(GLFW_KEY_KP_ADD)) {
+                g_iso_value += 0.002f;
+                g_iso_value = std::min(g_iso_value, 1.0f);
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_D)) {
+                g_sampling_distance -= 0.0001f;
+                g_sampling_distance = std::max(g_sampling_distance, 0.0001f);
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_S)) {
+                g_sampling_distance += 0.0001f;
+                g_sampling_distance = std::min(g_sampling_distance, 0.2f);
+            }
+
+            if (ImGui::IsKeyPressed(GLFW_KEY_R)) {
+                g_reload_shader = true;
+            }
+                        
+            if (ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_LEFT) || ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_MIDDLE) || ImGui::IsMouseDown(GLFW_MOUSE_BUTTON_RIGHT)) {
+                sampling_fact = g_sampling_distance_fact_move;
+            }   
+                       
         }
-
-
         // to add key inputs:
-        // check g_win.isKeyPressed(KEY_NAME)
+        // check ImGui::IsKeyPressed(KEY_NAME)
         // - KEY_NAME - key name      (GLFW_KEY_A ... GLFW_KEY_Z)
 
-        //if (g_win.isKeyPressed(GLFW_KEY_X)){
+        //if (ImGui::IsKeyPressed(GLFW_KEY_X)){
         //    
         //        ... do something
         //    
@@ -1074,7 +900,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        if (g_win.isKeyPressed(GLFW_KEY_R)) {
+        if (ImGui::IsKeyPressed(GLFW_KEY_R)) {
             if (g_reload_shader_pressed != true) {
                 g_reload_shader = true;
                 g_reload_shader_pressed = true;
@@ -1089,7 +915,7 @@ int main(int argc, char* argv[])
         }
 
 
-        if (g_transfer_dirty){
+        if (g_transfer_dirty && !first_frame){
             g_transfer_dirty = false;
 
             static unsigned byte_size = 255;
@@ -1197,26 +1023,17 @@ int main(int argc, char* argv[])
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
         //IMGUI ROUTINE end
-        //glBindTexture(GL_TEXTURE_2D, g_transfer_texture);
+        
         if (g_show_transfer_function)
             g_transfer_fun.draw_texture(g_transfer_function_pos, g_transfer_function_size, g_transfer_texture);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         g_win.update();
-
+        first_frame = false;
     }
 
-    //IMGUI shutdown
-    if (vao_handle) glDeleteVertexArrays(1, &vao_handle);
-    if (vbo_handle) glDeleteBuffers(1, &vbo_handle);
-    glDetachShader(g_gui_program, vert_handle);
-    glDetachShader(g_gui_program, frag_handle);
-    glDeleteShader(vert_handle);
-    glDeleteShader(frag_handle);
-    glDeleteProgram(g_gui_program);
-    //IMGUI shutdown end
-
-    ImGui::Shutdown();
+    //ImGui::Shutdown();
+    ImGui_ImplGlfwGL3_Shutdown();
 
     return 0;
 }
