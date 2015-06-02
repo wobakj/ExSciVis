@@ -440,13 +440,15 @@ void showGUI(){
 
         if (g_reload_shader_error) {
             text_color = ImVec4(1.0, 0.0, 0.0, 1.0);
+            ImGui::TextColored(text_color, "Shader Error");
         }
         else
         {
             text_color = ImVec4(0.0, 1.0, 0.0, 1.0);
+            ImGui::TextColored(text_color, "Shader Ok");
         }
 
-        ImGui::TextColored(text_color, "Shader OK");
+        
         ImGui::TextWrapped(g_error_message.c_str());
 
         g_reload_shader ^= ImGui::Button("Reload Shader");
