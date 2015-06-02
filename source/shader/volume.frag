@@ -60,7 +60,7 @@ void main()
     /// check if we are inside volume
     bool inside_volume = inside_volume_bounds(sampling_pos);
 
-#if TASK == 21
+#if TASK == 21 // ASSIGNMENT 1
     vec4 max_val = vec4(0.0, 0.0, 0.0, 0.0);
   
     // the traversal loop,
@@ -90,7 +90,7 @@ void main()
     dst = max_val;
 #endif 
     
-#if TASK == 22
+#if TASK == 22 // ASSIGNMENT 1
 
     // the traversal loop,
     // termination when the sampling position is outside volume boundarys
@@ -111,7 +111,7 @@ void main()
     }
 #endif
     
-#if TASK == 31 || TASK == 32  
+#if TASK == 31 || TASK == 32  // ASSIGNMENT 2 & 3 & 4
     // the traversal loop,
     // termination when the sampling position is outside volume boundarys
     // another termination condition for early ray termination is added
@@ -140,7 +140,7 @@ void main()
     }
 #endif 
 
-#if TASK == 41
+#if TASK == 41 // ASSIGNMENT 5 & 6 & 7
     // the traversal loop,
     // termination when the sampling position is outside volume boundarys
     // another termination condition for early ray termination is added
