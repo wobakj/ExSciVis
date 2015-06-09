@@ -326,6 +326,7 @@ void UpdateImGui()
 
 
 void showGUI(){
+    ImGui::SetNextWindowPos(ImVec2(5, 5));
     ImGui::Begin("Volume Settings", &g_show_gui, ImVec2(300, 500));
     static float f;
     g_over_gui = ImGui::IsMouseHoveringAnyWindow();
@@ -536,7 +537,8 @@ void showGUI(){
 
     ImGui::End();
 
-    g_show_transfer_function = ImGui::Begin("Transfer Function Window", &g_show_transfer_function_in_window, ImVec2(100, 200));
+    ImGui::SetNextWindowPos(ImVec2(315, 5));
+    g_show_transfer_function = ImGui::Begin("Transfer Function Window", &g_show_transfer_function_in_window, ImVec2(300, 500));
 
     g_transfer_function_pos.x = ImGui::GetItemBoxMin().x;
     g_transfer_function_pos.y = ImGui::GetItemBoxMin().y;
