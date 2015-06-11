@@ -34,7 +34,7 @@ Window::Window(glm::ivec2 const& windowsize)
     glfwSetKeyCallback(m_window, Window::keyCallback);
     glfwMakeContextCurrent(m_window);
 
-    //glewExperimental = GL_TRUE;
+    glewExperimental = GL_TRUE;
     glewInit();
     //glGetError();
 

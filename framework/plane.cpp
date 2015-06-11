@@ -8,8 +8,6 @@
 // -----------------------------------------------------------------------------
 
 #include "plane.hpp"
-#include <GL/glew.h>
-#include <GL/gl.h>
 #include <array>
 
 namespace {
