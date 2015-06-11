@@ -1,5 +1,5 @@
 #version 150
-#extension GL_ARB_shading_language_420pack : require
+//#extension GL_ARB_shading_language_420pack : require
 #extension GL_ARB_explicit_attrib_location : require
 
 #define TASK 21  // 21 22 31 32 33 4 5
@@ -59,6 +59,9 @@ void main()
 
     /// check if we are inside volume
     bool inside_volume = inside_volume_bounds(sampling_pos);
+    
+    if (!inside_volume)        
+        discard;
 
 #if TASK == 21 // ASSIGNMENT 1
     vec4 max_val = vec4(0.0, 0.0, 0.0, 0.0);
