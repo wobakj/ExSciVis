@@ -10,6 +10,10 @@
 // Window
 // -----------------------------------------------------------------------------
 
+#ifdef __APPLE__
+#define GLFW_INCLUDE_GLCOREARB
+#endif
+
 #include "color.hpp"
 
 #include <GL/glew.h>
