@@ -82,7 +82,7 @@ GLuint loadShaders(
     std::string const& vs,
     std::string const& fs,
     const int task_nbr,
-    const int enable_lightning,
+    const int enable_lighting,
     const int enable_shadowing,
     const int enable_opeacity_cor)
 {
@@ -102,7 +102,7 @@ GLuint loadShaders(
     f.replace(index + 34, 1, ss2.str());
 
     std::stringstream ss3;
-    ss3 << enable_lightning;
+    ss3 << enable_lighting;
 
     index = (int)f.find("#define ENABLE_LIGHTNING");
     f.replace(index + 25, 1, ss3.str());
@@ -366,7 +366,7 @@ void showGUI(){
 
         
         g_reload_shader ^= ImGui::Checkbox("1", &g_lighting_toggle); ImGui::SameLine();
-        g_task_chosen == 41 || g_task_chosen == 31 || g_task_chosen == 32 ? ImGui::Text("Enable Lightning") : ImGui::TextColored(ImVec4(0.2f, 0.2f, 0.2f, 0.5f), "Enable Lightning");
+        g_task_chosen == 41 || g_task_chosen == 31 || g_task_chosen == 32 ? ImGui::Text("Enable Lighting") : ImGui::TextColored(ImVec4(0.2f, 0.2f, 0.2f, 0.5f), "Enable Lighting");
 
         g_reload_shader ^= ImGui::Checkbox("2", &g_shadow_toggle); ImGui::SameLine();
         g_task_chosen == 41 || g_task_chosen == 31 || g_task_chosen == 32 ? ImGui::Text("Enable Shadows") : ImGui::TextColored(ImVec4(0.2f, 0.2f, 0.2f, 0.5f), "Enable Shadows");
