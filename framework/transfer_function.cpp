@@ -20,8 +20,8 @@
 #include "utils.hpp"
 
 const char* vertex_shader = "\
-#version 140\n\
-#extension GL_ARB_shading_language_420pack : require\n\
+#version 330\n\
+//#extension GL_ARB_shading_language_420pack : require\n\
 #extension GL_ARB_explicit_attrib_location : require\n\
                                                         \n\
 layout(location = 0) in vec3 position;\n\
@@ -39,8 +39,8 @@ void main()\n\
 ";
 
 const char* fragment_shader = "\
-                              #version 140\n\
-#extension GL_ARB_shading_language_420pack : require\n\
+#version 330\n\
+//#extension GL_ARB_shading_language_420pack : require\n\
 #extension GL_ARB_explicit_attrib_location : require\n\
                                                             \n\
 uniform sampler2D transfer_texture;\n\
