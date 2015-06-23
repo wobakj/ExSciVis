@@ -27,14 +27,11 @@ const char* vertex_shader = "\
 layout(location = 0) in vec3 position;\n\
 layout(location = 1) in vec2 vtexcoord; \n\
 out vec2 fTexCoord;\n\
-uniform mat4 Projection;\n\
-uniform mat4 Modelview;\n\
 \n\
 void main()\n\
 {\n\
     fTexCoord = vtexcoord;\n\
-    vec4 Position = vec4(position, 1.0);\n\
-    gl_Position = Projection * Modelview * Position;\n\
+    gl_Position = vec4(position, 1.0);\n\
 }\n\
 ";
 
@@ -180,25 +177,9 @@ Transfer_function::reset(){
 void                  
 Transfer_function::draw_texture(const glm::vec2& tf_pos, const glm::vec2& tf_size, const GLuint& texture) const{
 
-
-
-    const float ortho_projection[4][4] =
-    {
-        { 2.0f, 0.0f, 0.0f, 0.0f },
-        { 0.0f, -2.0f, 0.0f, 0.0f },
-        { 0.0f, 0.0f, -1.0f, 0.0f },
-        { -1.0f, 1.0f, 0.0f, 1.0f },
-    };
-    glm::mat4 view = glm::mat4();
-
     glViewport((GLint)tf_pos.x, (GLint)tf_pos.y, (GLint)tf_size.x, (GLint)tf_size.y);
 
     glUseProgram(m_program_id);
-    glUniformMatrix4fv(glGetUniformLocation(m_program_id, "Projection"), 1, GL_FALSE,
-        //glm::value_ptr(projection));
-        &ortho_projection[0][0]);
-    glUniformMatrix4fv(glGetUniformLocation(m_program_id, "Modelview"), 1, GL_FALSE,
-        glm::value_ptr(view));
 
     // set texture uniform
     glUniform1i(glGetUniformLocation(m_program_id, "transfer_texture"), 1);
@@ -206,5 +187,4 @@ Transfer_function::draw_texture(const glm::vec2& tf_pos, const glm::vec2& tf_siz
     m_plane.draw();
 
     glUseProgram(0);
-
 }

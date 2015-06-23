@@ -43,7 +43,7 @@ public:
     glm::vec2 texCoord;
   };
     
-  Plane(glm::vec2 min = glm::vec2(-0.0f), glm::vec2 max = glm::vec2(1.0f));
+  Plane(glm::vec2 min = glm::vec2(-1.0f), glm::vec2 max = glm::vec2(1.0f));
   void draw() const;
 
 private:
