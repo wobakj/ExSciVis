@@ -31,7 +31,8 @@ public:
 
   void reset();
 
-  image_data_type          get_RGBA_transfer_function_buffer() const;
+  image_data_type const& get_buffer() const;
+  void                  update_buffer();
   //void                  update_and_draw();
   void                  draw_texture(glm::vec2 const& window_dim, glm::vec2 const& tf_pos, GLuint const& texture) const;
   container_type&       get_piecewise_container(){ return m_piecewise_container;};
@@ -41,7 +42,7 @@ private:
 
 private:
   container_type    m_piecewise_container;
-  
+  image_data_type   m_buffer;
   unsigned int      m_program_id;
   //unsigned int      m_vao;
   Plane             m_plane;

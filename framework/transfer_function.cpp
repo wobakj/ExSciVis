@@ -58,9 +58,9 @@ void main()\n\
 namespace helper {
 
 template<typename T>
-const T clamp(const T val, const T min, const T max)
+void clamp(T& val, const T min, const T max)
 {
- return ((val > max) ? max : (val < min) ? min : val);
+  val = ((val > max) ? max : (val < min) ? min : val);
 }
 
 template<typename T>
@@ -73,6 +73,7 @@ const T weight(const float w, const T a, const T b)
 
 Transfer_function::Transfer_function()
   : m_piecewise_container(),
+  m_buffer(255 * 4), // width =255 height = 1 channels = 4 ///TODO: maybe dont hardcode?
   m_program_id(0),
   //m_vao(0),
   m_plane(),
@@ -90,10 +91,7 @@ void
 Transfer_function::add(unsigned data_value, glm::vec4 color)
 {
   helper::clamp(data_value, 0u, 255u);
-  helper::clamp(color.r, 0.0f, 1.0f);
-  helper::clamp(color.g, 0.0f, 1.0f);
-  helper::clamp(color.b, 0.0f, 1.0f);
-  helper::clamp(color.a, 0.0f, 1.0f);
+  color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
 
   //m_piecewise_container.insert(element_type(data_value, color));
   m_piecewise_container[data_value] = color;
@@ -108,11 +106,7 @@ Transfer_function::remove(unsigned data_value)
     m_piecewise_container.erase(data_value);
 }
 
-image_data_type Transfer_function::get_RGBA_transfer_function_buffer() const
-{
-  size_t buffer_size = 255 * 4; // width =255 height = 1 channels = 4 ///TODO: maybe dont hardcode?
-  image_data_type transfer_function_buffer;
-  transfer_function_buffer.resize(buffer_size);
+void Transfer_function::update_buffer(){
 
   unsigned data_value_f = 0u;
   unsigned data_value_b = 255u;
@@ -135,10 +129,10 @@ image_data_type Transfer_function::get_RGBA_transfer_function_buffer() const
         
     for (unsigned i = data_value_f; i != data_value_b; ++i) {
 
-      transfer_function_buffer[i * 4]     = static_cast<unsigned char>(helper::weight(step, color_f.r, color_b.r) * 255.0f);
-      transfer_function_buffer[i * 4 + 1] = static_cast<unsigned char>(helper::weight(step, color_f.g, color_b.g) * 255.0f);
-      transfer_function_buffer[i * 4 + 2] = static_cast<unsigned char>(helper::weight(step, color_f.b, color_b.b) * 255.0f);
-      transfer_function_buffer[i * 4 + 3] = static_cast<unsigned char>(helper::weight(step, color_f.a, color_b.a) * 255.0f);
+      m_buffer[i * 4]     = static_cast<unsigned char>(helper::weight(step, color_f.r, color_b.r) * 255.0f);
+      m_buffer[i * 4 + 1] = static_cast<unsigned char>(helper::weight(step, color_f.g, color_b.g) * 255.0f);
+      m_buffer[i * 4 + 2] = static_cast<unsigned char>(helper::weight(step, color_f.b, color_b.b) * 255.0f);
+      m_buffer[i * 4 + 3] = static_cast<unsigned char>(helper::weight(step, color_f.a, color_b.a) * 255.0f);
       step += step_size;     
     }
 
@@ -156,20 +150,26 @@ image_data_type Transfer_function::get_RGBA_transfer_function_buffer() const
     float step = 0.0;
     
     for (unsigned i = data_value_f; i != data_value_b; ++i) {
-      transfer_function_buffer[i * 4]     = static_cast<unsigned char>(helper::weight(step, color_f.r, color_b.r) * 255.0f);
-      transfer_function_buffer[i * 4 + 1] = static_cast<unsigned char>(helper::weight(step, color_f.g, color_b.g) * 255.0f);
-      transfer_function_buffer[i * 4 + 2] = static_cast<unsigned char>(helper::weight(step, color_f.b, color_b.b) * 255.0f);
-      transfer_function_buffer[i * 4 + 3] = static_cast<unsigned char>(helper::weight(step, color_f.a, color_b.a) * 255.0f);
+      m_buffer[i * 4]     = static_cast<unsigned char>(helper::weight(step, color_f.r, color_b.r) * 255.0f);
+      m_buffer[i * 4 + 1] = static_cast<unsigned char>(helper::weight(step, color_f.g, color_b.g) * 255.0f);
+      m_buffer[i * 4 + 2] = static_cast<unsigned char>(helper::weight(step, color_f.b, color_b.b) * 255.0f);
+      m_buffer[i * 4 + 3] = static_cast<unsigned char>(helper::weight(step, color_f.a, color_b.a) * 255.0f);
       step += step_size;
     }
   }
-
-  return transfer_function_buffer;
 }
+
+image_data_type const&
+Transfer_function::get_buffer() const{
+  return m_buffer;
+}
+
 
 void
 Transfer_function::reset(){
     m_piecewise_container.clear();
+    m_buffer.clear();
+    m_buffer.resize(255 * 4);
     m_dirty = true;
 }
 
