@@ -31,7 +31,7 @@ public:
 
   void reset();
 
-  image_data_type const& get_buffer() const;
+  image_data_type const& get_buffer();
   void                  update_buffer();
   //void                  update_and_draw();
   void                  draw_texture(glm::vec2 const& window_dim, glm::vec2 const& tf_pos, GLuint const& texture) const;

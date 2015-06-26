@@ -85,6 +85,7 @@ Transfer_function::Transfer_function()
 void Transfer_function::add(float data_value, glm::vec4 color)
 {
   add((unsigned)(data_value * 255.0), color);
+  m_dirty = true;
 }
 
 void
@@ -95,6 +96,7 @@ Transfer_function::add(unsigned data_value, glm::vec4 color)
 
   //m_piecewise_container.insert(element_type(data_value, color));
   m_piecewise_container[data_value] = color;
+  m_dirty = true;
 }
 
 void
@@ -104,6 +106,7 @@ Transfer_function::remove(unsigned data_value)
 
     //m_piecewise_container.insert(element_type(data_value, color));
     m_piecewise_container.erase(data_value);
+    m_dirty = true;
 }
 
 void Transfer_function::update_buffer(){
@@ -160,7 +163,11 @@ void Transfer_function::update_buffer(){
 }
 
 image_data_type const&
-Transfer_function::get_buffer() const{
+Transfer_function::get_buffer() {
+  if(m_dirty) {
+    update_buffer();
+    m_dirty = false;
+  }
   return m_buffer;
 }
 

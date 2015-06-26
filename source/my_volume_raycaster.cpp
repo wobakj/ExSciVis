@@ -775,7 +775,6 @@ int main(int argc, char* argv[])
     //  - vec4f         - color and alpha value   (0.0 .. 1.0) per channel
     g_transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
     g_transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 1.0));
-    g_transfer_fun.update_buffer();
     g_transfer_dirty = true;
 
     ///NOTHING TODO HERE-------------------------------------------------------------------------------
@@ -920,8 +919,6 @@ int main(int argc, char* argv[])
 
         if (g_transfer_dirty && !first_frame){
             g_transfer_dirty = false;
-
-            g_transfer_fun.update_buffer();
 
             glActiveTexture(GL_TEXTURE1);
             updateTexture2D(g_transfer_texture, 255u, 1u, (char*)&g_transfer_fun.get_buffer()[0]);
